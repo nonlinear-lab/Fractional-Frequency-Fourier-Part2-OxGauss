@@ -1,0 +1,59 @@
+@===============================================================================@
+@ OxGauss code for ADF analysis			                	@
+@ Input: 			y: Tx1 vector of time series (LGDP)		@
+@ 	: 			x: Tx1 vector of time series (LPOP)		@
+@ Output: 			bounds test (BT) statistics			@
+@ Subprgram: 			none                                            @    
+@ Max Lag length: 		4                                        	@
+@===============================================================================@
+
+closeall;
+
+output file=bt_out(1).txt reset;
+
+@=====Data input===============================================@
+load data[26,5]=data1.txt;
+rr=rows(data);
+cc=cols(data);
+
+y0=data[1:rr,1];
+x1=data[1:rr,2];
+x2=data[1:rr,3];
+x3=data[1:rr,4];
+x4=data[1:rr,5];
+
+mout=zeros(cc,1);
+
+k=1;
+
+p=1;
+do while p<=cc;
+
+y0=data[1:rr,p];
+
+@=====ARDL model===============================================@
+"++ADL method (long-run) ++";
+
+n=rows(y0);
+const=ones(n,1);
+trend=seqa(1,1,n);
+dy=y0[k+1:n]-y0[k:n-1];
+x=const[k+2:n]~trend[k+2:n]~y0[k+1:n-1]~dy[k:n-2];
+y=dy[k+1:n-1];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+adf=t[3];
+mout[p,1]=adf;
+
+"ADF=" adf;
+
+p=p+1;
+endo;
+"Results=" mout;
+
+@=====End of calculation===============================================@

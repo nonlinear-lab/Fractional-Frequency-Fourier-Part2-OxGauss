@@ -1,0 +1,84 @@
+@==============================================================@
+@ OxGauss code for Fourier ADF analysis			               @
+@ Input: 			y: Tx1 vector of time series (LGDP)		   @
+@ 	: 			x: Tx1 vector of time series (LPOP)		       @
+@ Output: 			bounds test (BT) statistics			       @
+@ Subprgram: 			none                                   @    
+@ Max Lag length: 		4                                      @
+@==============================================================@
+
+closeall;
+
+output file=bt_out(1).txt reset;
+
+@=====Data input===============================================@
+load data[26,5]=data1.txt;
+rr=rows(data);
+cc=cols(data);
+
+mout=zeros(cc,2);
+
+p=1;
+do while p<=cc;
+
+y0=data[1:rr,p];
+
+@=====Fourier ADF test===============================================@
+
+akaike0=-73737373;
+k=1;
+"++ Fractional frequency ++";
+kk=0.1;
+Do while kk<=4;
+
+n=rows(y0);
+const=ones(n,1);
+trend=seqa(1,1,n);
+sinf=sin((2*3.141592*trend*kk)/n);
+cosf=cos((2*3.141592*trend*kk)/n);
+dy=y0[k+1:n]-y0[k:n-1];
+x=const[k+2:n]~trend[k+2:n]~y0[k+1:n-1]~dy[k:n-2]~sinf[k+2:n]~cosf[k+2:n];
+y=dy[k+1:n-1];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+LK=-(rows(y)/2)*(1+ln(3.141593*2)+ln(e'e/rows(y)));
+akaike=-2*(LK/rows(y))+2*(cols(x)/rows(y));
+if akaike>akaike0;
+kk0=kk;
+akaike0=akaike;    
+endif;
+
+kk=kk+0.1;
+endo;    
+
+const=ones(n,1);
+trend=seqa(1,1,n);
+sinf=sin((2*3.141592*trend*kk0)/n);
+cosf=cos((2*3.141592*trend*kk0)/n);
+dy=y0[k+1:n]-y0[k:n-1];
+x=const[k+2:n]~trend[k+2:n]~y0[k+1:n-1]~dy[k:n-2]~sinf[k+2:n]~cosf[k+2:n];
+y=dy[k+1:n-1];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+adf=t[3];
+
+"fff_adf=" adf;
+"optimal frequency=" kk0;
+mout[p,1]=kk0;
+mout[p,2]=adf;
+
+p=p+1;
+endo;
+
+"findings=" mout;
+@=====end of calcuration===============================================@

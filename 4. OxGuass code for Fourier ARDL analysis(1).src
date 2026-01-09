@@ -1,0 +1,153 @@
+@===============================================================================@
+@ OxGauss code for Fourier ARDL analysis			                	@
+@ Input: 			y: Tx1 vector of time series (LGDP)		@
+@ 	: 			x: Tx1 vector of time series (LPOP)		@
+@ Output: 			bounds test (BT) statistics			@
+@ Subprgram: 			none                                            @    
+@ Max Lag length: 		4                                        	@
+@===============================================================================@
+
+closeall;
+
+output file=bt_out(1).txt reset;
+
+@=====Data input===============================================@
+load data[26,5]=data1.txt;
+rr=rows(data);
+cc=cols(data);
+
+y0=data[1:rr,1];
+x1=data[1:rr,2];
+x2=data[1:rr,3];
+x3=data[1:rr,4];
+x4=data[1:rr,5];
+
+@=====ARDL model===============================================@
+akaike0=-73737373;
+k=1;
+"++ARDL method (long-run) ++";
+kk=0.1;
+Do while kk<=4;
+
+n=rows(y0);
+const=ones(n,1);
+tt=seqa(1,1,n);
+sinf=sin((2*3.141592*tt*kk)/n);
+cosf=cos((2*3.141592*tt*kk)/n);
+x=y0[k:n-1]~x1[k+1:n]~x1[k:n-1]~x2[k+1:n]~x2[k:n-1]~x3[k+1:n]~x3[k:n-1]~x4[k+1:n]~x4[k:n-1]~const[k+1:n]~sinf[k:n-1]~cosf[k:n-1];
+y=y0[k+1:n];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+LK=-(rows(y)/2)*(1+ln(3.141593*2)+ln(e'e/rows(y)));
+akaike=-2*(LK/rows(y))+2*(cols(x)/rows(y));
+if akaike>akaike0;
+kk0=kk;
+akaike0=akaike;    
+endif;
+
+kk=kk+0.1;
+endo;    
+
+tt=seqa(1,1,n);
+sinf=sin((2*3.141592*tt*kk0)/n);
+cosf=cos((2*3.141592*tt*kk0)/n);
+x=y0[k:n-1]~x1[k+1:n]~x1[k:n-1]~x2[k+1:n]~x2[k:n-1]~x3[k+1:n]~x3[k:n-1]~x4[k+1:n]~x4[k:n-1]~const[k+1:n]~sinf[k:n-1]~cosf[k:n-1];
+y=y0[k+1:n];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+
+"beta=" beta;
+"sd=" sd;
+
+@=====ECM model===============================================@
+"++ECM method++";
+
+/* lr is long-run coefficient */
+
+lr11=(beta[2]+beta[3])/(1-beta[1]);
+lr12=(beta[4]+beta[5])/(1-beta[1]);
+lr13=(beta[6]+beta[7])/(1-beta[1]);
+lr14=(beta[8]+beta[9])/(1-beta[1]);
+lr2=(beta[11]+beta[12])/(1-beta[1]);
+
+"lr11=" lr11;
+"lr12=" lr12;
+"lr13=" lr13;
+"lr14=" lr14;
+"lr2=" lr2;
+
+sinf0=sin((2*3.141592*tt*kk0)/n);
+cosf0=cos((2*3.141592*tt*kk0)/n);
+coin=y0-lr11*x1-lr12*x2-lr13*x3-lr14*x4-lr2*(sinf0+cosf0);
+
+n=rows(y0);
+const=ones(n,1);
+trend=seqa(1,1,n);
+dy1=y0[2:n]-y0[1:n-1];
+dx1=x1[2:n]-x1[1:n-1];
+dx2=x2[2:n]-x2[1:n-1];
+dx3=x3[2:n]-x3[1:n-1];
+dx4=x4[2:n]-x4[1:n-1];
+tt=seqa(1,1,n);
+sinf=sin((2*3.141592*tt*kk0)/n);
+cosf=cos((2*3.141592*tt*kk0)/n);
+@x=const[k+1:n]~sinf0[k:n-1]~cosf0[k:n-1]~dx1[k:n-1]~dx2[k:n-1]~dx3[k:n-1]~dx4[k:n-1]~coin[k:n-1];@
+@x=const[k+1:n]~sinf0[k+1:n]~cosf0[k+1:n]~dx1[k:n-1]~dx2[k:n-1]~dx3[k:n-1]~dx4[k:n-1]~coin[k:n-1];@
+x=const[k+1:n]~dx1[k:n-1]~dx2[k:n-1]~dx3[k:n-1]~dx4[k:n-1]~coin[k:n-1];
+
+y=dy1[k:n-1];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+
+"beta=" beta;
+"sd=" sd;
+
+@=====UECM model===============================================@
+"++UECM method++";
+n=rows(y0);
+const=ones(n,1);
+trend=seqa(1,1,n);
+tt=seqa(1,1,n);
+sinf=sin((2*3.141592*tt*kk0)/n);
+cosf=cos((2*3.141592*tt*kk0)/n);
+x=dx1[k:n-1]~dx2[k:n-1]~dx3[k:n-1]~dx4[k:n-1]~const[k+1:n]~trend[k:n-1]~sinf0[k:n-1]~cosf0[k:n-1]~y0[k:n-1]~x1[k:n-1]~x2[k:n-1]~x3[k:n-1]~x4[k:n-1];
+x1=dx1[k:n-1]~dx2[k:n-1]~dx3[k:n-1]~dx4[k:n-1]~const[k+1:n]~sinf0[k:n-1]~cosf0[k:n-1];
+y=dy1[k:n-1];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ee=e'e;
+    invx1=inv(x1'x1);
+    beta1=invx1*x1'y;
+    "beta1=" beta1;
+    e1=y-x1*beta1;
+    ee1=e1'e1;
+    f_num=(ee1-ee)/(cols(x)-cols(x1));
+    f_den=ee/(rows(y)-cols(x));
+    ff=f_num/f_den;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+LK=-(rows(y)/2)*(1+ln(3.141592*2)+ln(e'e/rows(y)));
+akaike=-2*(LK/rows(y))+2*(cols(x)/rows(y));
+
+"beta=" beta;
+"sd=" sd;
+"optimal frequency=" kk0;
+"Akaike Information Criterion =" akaike0;
+"Bounds test (BT) statistics=" ff;

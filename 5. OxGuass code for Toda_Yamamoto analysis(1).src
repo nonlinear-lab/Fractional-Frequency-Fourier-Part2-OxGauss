@@ -1,0 +1,81 @@
+@===============================================================================@
+@ OxGauss code for Toda-yamamoto analysis			                	@
+@ Input: 			y: Tx1 vector of time series (LGDP)		@
+@ 	: 			x: Tx1 vector of time series (LPOP)		@
+@ Output: 			bounds test (BT) statistics			@
+@ Subprgram: 			none                                            @    
+@ Max Lag length: 		4                                        	@
+@===============================================================================@
+
+closeall;
+
+output file=bt_out(1).txt reset;
+
+@=====Data input===============================================@
+load data[26,5]=data1.txt;
+rr=rows(data);
+cc=cols(data);
+
+mout=zeros(cc-1,2);
+
+k=1;
+
+s=1;
+do while s<=2;
+@ s=1, dependent variable: y @
+@ s=2, dependent variable: x @
+
+p=1;
+do while p<=(cc-1); 
+
+if s==1;
+y0=data[1:rr,1];
+x0=data[1:rr,p+1];    
+endif;
+
+if s==2;
+x0=data[1:rr,1];
+y0=data[1:rr,p+1];    
+endif;
+
+@=====Toda-Yamamoto model===============================================@
+n=rows(y0);
+const=ones(n,1);
+trend=seqa(1,1,n);
+x=y0[k+2:n-1]~y0[k+1:n-2]~y0[k:n-3]~const[k+3:n]~trend[k+3:n]~x0[k+2:n-1]~x0[k+1:n-2]~x0[k:n-3];
+x1=y0[k+2:n-1]~y0[k+1:n-2]~y0[k:n-3]~const[k+3:n]~trend[k+3:n]~x0[k:n-3];
+y=y0[k+3:n];
+invx=inv(x'x);
+beta=invx*x'y;
+e=y-x*beta;
+ee=e'e;
+    invx1=inv(x1'x1);
+    beta1=invx1*x1'y;
+    e1=y-x1*beta1;
+    ee1=e1'e1;
+    f_num=(ee1-ee)/(cols(x)-cols(x1));
+    f_den=ee/(rows(y)-cols(x));
+    ff=f_num/f_den;
+ssr=e'e;
+var=(e'e/(rows(y)-cols(x)))*invx;
+sd=sqrt(diag(var));
+t=beta./sd;
+LK=-(rows(y)/2)*(1+ln(3.141593*2)+ln(e'e/rows(y)));
+akaike=-2*(LK/rows(y))+2*(cols(x)/rows(y));
+
+"beta=" beta;
+"sd=" sd;
+"Akaike Information Criterion =" akaike;
+"Toda-Yamaoto (TY) statistics=" ff;
+
+mout[p,s]=ff;
+
+p=p+1;
+endo;
+
+s=s+1;
+endo;
+
+"results=" mout;
+
+@=====end of calculation===================================@
